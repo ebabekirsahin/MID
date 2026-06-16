@@ -1,6 +1,7 @@
 """
 MarkItDown Converter — Streamlit App
 Converts PDF, DOCX, XLSX, PPTX and other files to Markdown.
+Includes a note editor that renders notes as Markdown live.
 """
 
 import tempfile
@@ -55,32 +56,55 @@ def convert(uploaded_file) -> tuple[str, str | None]:
 
 
 def render_result(name: str, markdown: str):
-    col1, col2 = st.columns([7, 3])
-    with col1:
-        st.markdown(f"#### 📄 {name}")
-    with col2:
-        mode = st.radio(
-            "mod",
-            ["📖 Preview", "📋 Kopyala"],
-            horizontal=True,
-            key=f"mode_{name}",
-            label_visibility="collapsed",
-        )
+    st.markdown(f"#### 📄 {name}")
 
-    if mode == "📖 Preview":
+    tab1, tab2, tab3 = st.tabs(["📖 Önizleme", "📋 Ham Markdown", "📝 Notlarım"])
+
+    with tab1:
         with st.container(border=True):
             st.markdown(markdown)
-    else:
+
+    with tab2:
         st.text_area(
-            "Markdown — seç ve kopyala",
+            "Ham Markdown",
             value=markdown,
             height=500,
-            key=f"copy_{name}",
+            key=f"raw_{name}",
             label_visibility="collapsed",
         )
 
+    with tab3:
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.caption("✏️ Notunu yaz (Markdown destekler)")
+            note = st.text_area(
+                "Not",
+                height=420,
+                key=f"note_{name}",
+                placeholder="## Başlık\n\n- madde 1\n- madde 2\n\n**kalın**, *italik*, `kod`",
+                label_visibility="collapsed",
+            )
+
+        with col_right:
+            st.caption("👁️ Markdown önizleme")
+            with st.container(border=True, height=420):
+                if note:
+                    st.markdown(note)
+                else:
+                    st.markdown("*Solda not yazmaya başla…*")
+
+        if note:
+            st.download_button(
+                "⬇️ Notu .md olarak indir",
+                data=note.encode("utf-8"),
+                file_name=Path(name).stem + "_not.md",
+                mime="text/markdown",
+                key=f"dl_note_{name}",
+            )
+
     st.download_button(
-        "⬇️ .md olarak indir",
+        "⬇️ Dönüştürülen dosyayı .md olarak indir",
         data=markdown.encode("utf-8"),
         file_name=Path(name).stem + ".md",
         mime="text/markdown",
