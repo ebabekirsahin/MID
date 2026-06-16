@@ -1,11 +1,2 @@
 streamlit
-markitdown
-pdfminer-six
-pdfplumber
-lxml
-mammoth
-openpyxl
-pandas
-xlrd
-python-pptx
-olefile
+markitdown[all]
