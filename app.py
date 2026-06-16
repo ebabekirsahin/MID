@@ -1,7 +1,6 @@
 """
 MarkItDown Converter — Streamlit App
-Converts PDF, DOCX, XLSX, PPTX and other files to Markdown
-using the markitdown library.
+Converts PDF, DOCX, XLSX, PPTX and other files to Markdown.
 """
 
 import tempfile
@@ -11,122 +10,77 @@ from pathlib import Path
 import streamlit as st
 from markitdown import MarkItDown
 
-# ── Page config ──────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="MarkItDown Converter",
-    page_icon="📄",
-    layout="wide",
-)
+st.set_page_config(page_title="MarkItDown Converter", page_icon="📄", layout="wide")
 
-# ── Styling ───────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-        .block-container { padding-top: 2rem; }
-        .file-info-box {
-            background: #f0f4ff;
-            border-left: 4px solid #4f6ef7;
-            border-radius: 6px;
-            padding: 0.6rem 1rem;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-        .stTextArea textarea { font-family: 'Courier New', monospace; font-size: 13px; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+    .block-container { padding-top: 2rem; }
+    .file-meta {
+        background: #f0f4ff;
+        border-left: 4px solid #4f6ef7;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-SUPPORTED_TYPES = {
-    ".pdf":  "PDF Document",
-    ".docx": "Word Document",
-    ".xlsx": "Excel Spreadsheet",
-    ".xls":  "Excel Spreadsheet (legacy)",
-    ".pptx": "PowerPoint Presentation",
-    ".ppt":  "PowerPoint Presentation (legacy)",
-    ".html": "HTML File",
-    ".htm":  "HTML File",
-    ".txt":  "Plain Text",
-    ".csv":  "CSV File",
-    ".md":   "Markdown File",
-    ".xml":  "XML File",
-    ".json": "JSON File",
+SUPPORTED = {
+    ".pdf": "PDF", ".docx": "Word", ".xlsx": "Excel", ".xls": "Excel (legacy)",
+    ".pptx": "PowerPoint", ".ppt": "PowerPoint (legacy)", ".html": "HTML",
+    ".htm": "HTML", ".txt": "Text", ".csv": "CSV", ".md": "Markdown",
+    ".xml": "XML", ".json": "JSON", ".epub": "ePub", ".zip": "ZIP",
 }
-MAX_FILE_SIZE_MB = 50
+MAX_MB = 50
 
 
-# ── Core conversion ───────────────────────────────────────────────────────────
-def convert_to_markdown(uploaded_file) -> tuple[str, str | None]:
-    """
-    Convert an uploaded Streamlit file to Markdown text.
-
-    Returns:
-        (markdown_text, error_message) — one of which will be None.
-    """
+def convert(uploaded_file) -> tuple[str, str | None]:
     suffix = Path(uploaded_file.name).suffix.lower()
-
+    tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=suffix
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(uploaded_file.getvalue())
             tmp_path = tmp.name
-
-        md = MarkItDown()
-        result = md.convert(tmp_path)
+        result = MarkItDown().convert(tmp_path)
         return result.text_content, None
-
-    except Exception as exc:  # noqa: BLE001
-        return "", f"{type(exc).__name__}: {exc}"
-
+    except Exception as e:
+        return "", f"{type(e).__name__}: {e}"
     finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
-
-
-# ── UI helpers ────────────────────────────────────────────────────────────────
-def file_info_html(name: str, size_bytes: int, ext: str) -> str:
-    kind = SUPPORTED_TYPES.get(ext, "Unknown file type")
-    size_kb = size_bytes / 1024
-    size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.2f} MB"
-    return (
-        f'<div class="file-info-box">'
-        f"📎 <strong>{name}</strong> &nbsp;·&nbsp; {kind} &nbsp;·&nbsp; {size_str}"
-        f"</div>"
-    )
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 def render_result(name: str, markdown: str):
-    """Show preview / raw toggle and download button for one file."""
-    st.markdown(f"### {name}")
-
-    col_left, col_right = st.columns([8, 2])
-    with col_right:
-        view_mode = st.radio(
-            "View",
-            ["Preview", "Raw"],
+    col1, col2 = st.columns([7, 3])
+    with col1:
+        st.markdown(f"#### 📄 {name}")
+    with col2:
+        mode = st.radio(
+            "mod",
+            ["📖 Preview", "📋 Kopyala"],
             horizontal=True,
-            key=f"view_{name}",
+            key=f"mode_{name}",
             label_visibility="collapsed",
         )
 
-    if view_mode == "Preview":
+    if mode == "📖 Preview":
         with st.container(border=True):
-            st.markdown(markdown, unsafe_allow_html=False)
+            st.markdown(markdown)
     else:
         st.text_area(
-            "Markdown source",
+            "Markdown — seç ve kopyala",
             value=markdown,
-            height=420,
-            key=f"raw_{name}",
+            height=500,
+            key=f"copy_{name}",
             label_visibility="collapsed",
         )
 
     st.download_button(
-        label="⬇️ Download .md",
+        "⬇️ .md olarak indir",
         data=markdown.encode("utf-8"),
         file_name=Path(name).stem + ".md",
         mime="text/markdown",
@@ -135,76 +89,55 @@ def render_result(name: str, markdown: str):
     st.divider()
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     st.title("📄 MarkItDown Converter")
-    st.caption(
-        "Upload PDF, DOCX, XLSX, PPTX or other files — get clean Markdown back."
-    )
+    st.caption("PDF, DOCX, XLSX, PPTX ve diğer dosyaları Markdown'a çevir.")
 
-    uploaded_files = st.file_uploader(
-        "Drop files here or click to browse",
-        type=list({k.lstrip(".") for k in SUPPORTED_TYPES}),
+    files = st.file_uploader(
+        "Dosya yükle",
+        type=[k.lstrip(".") for k in SUPPORTED],
         accept_multiple_files=True,
         label_visibility="collapsed",
     )
 
-    if not uploaded_files:
-        st.info(
-            "Supported formats: "
-            + ", ".join(f"`{k}`" for k in SUPPORTED_TYPES),
-            icon="ℹ️",
-        )
+    if not files:
+        st.info("Desteklenen formatlar: " + " · ".join(f"`{k}`" for k in SUPPORTED), icon="ℹ️")
         return
 
-    # Filter oversized files before processing
     valid, skipped = [], []
-    for f in uploaded_files:
-        if len(f.getvalue()) > MAX_FILE_SIZE_MB * 1024 * 1024:
+    for f in files:
+        if len(f.getvalue()) > MAX_MB * 1024 * 1024:
             skipped.append(f.name)
         else:
             valid.append(f)
 
     if skipped:
-        st.warning(
-            f"Skipped (>{MAX_FILE_SIZE_MB} MB): " + ", ".join(skipped),
-            icon="⚠️",
-        )
+        st.warning(f"Boyut aşımı (>{MAX_MB} MB), atlandı: " + ", ".join(skipped))
 
-    if not valid:
-        return
-
-    results: list[tuple[str, str]] = []
-
-    with st.spinner(f"Converting {len(valid)} file(s)…"):
+    results = []
+    with st.spinner(f"{len(valid)} dosya dönüştürülüyor…"):
         for uf in valid:
             ext = Path(uf.name).suffix.lower()
+            size_kb = len(uf.getvalue()) / 1024
+            size_str = f"{size_kb:.0f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
             st.markdown(
-                file_info_html(uf.name, len(uf.getvalue()), ext),
+                f'<div class="file-meta">📎 <b>{uf.name}</b> &nbsp;·&nbsp; '
+                f'{SUPPORTED.get(ext, "Dosya")} &nbsp;·&nbsp; {size_str}</div>',
                 unsafe_allow_html=True,
             )
-            markdown, error = convert_to_markdown(uf)
-
-            if error:
-                st.error(f"**{uf.name}** could not be converted.\n\n`{error}`")
-            elif not markdown.strip():
-                st.warning(
-                    f"**{uf.name}** converted but produced no text content.",
-                    icon="⚠️",
-                )
+            md, err = convert(uf)
+            if err:
+                st.error(f"**{uf.name}** dönüştürülemedi: `{err}`")
+            elif not md.strip():
+                st.warning(f"**{uf.name}** dönüştürüldü fakat içerik boş.")
             else:
-                results.append((uf.name, markdown))
+                results.append((uf.name, md))
 
-    if not results:
-        return
-
-    st.success(
-        f"✅ {len(results)} of {len(valid)} file(s) converted successfully."
-    )
-    st.divider()
-
-    for name, markdown in results:
-        render_result(name, markdown)
+    if results:
+        st.success(f"✅ {len(results)}/{len(valid)} dosya başarıyla dönüştürüldü.")
+        st.divider()
+        for name, md in results:
+            render_result(name, md)
 
 
 if __name__ == "__main__":
