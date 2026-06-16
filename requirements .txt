@@ -1,30 +1,11 @@
-streamlit>=1.35.0
- 
-# markitdown core
-markitdown==0.1.6
-beautifulsoup4
-charset-normalizer
-defusedxml
-magika~=0.6.1
-markdownify
-requests
- 
-# PDF
-pdfminer-six>=20251230
-pdfplumber>=0.11.9
- 
-# DOCX
+streamlit
+markitdown
+pdfminer-six
+pdfplumber
 lxml
-mammoth~=1.11.0
- 
-# XLSX / XLS
+mammoth
 openpyxl
 pandas
 xlrd
- 
-# PPTX
 python-pptx
- 
-# Outlook (.msg)
 olefile
- 
